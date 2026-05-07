@@ -165,7 +165,9 @@ def run_experiment(
                     rule_id_counts[rid] = rule_id_counts.get(rid, 0) + 1
             else:
                 inst.rule_abstained = True
-                n_abstained += 1
+                # Only count abstentions for stages where rules are active
+                if config.stage != "biobert_only":
+                    n_abstained += 1
                 inst.biobert_labels = result["labels"]
                 inst.biobert_probs = result["probs"]
             predictions.append(

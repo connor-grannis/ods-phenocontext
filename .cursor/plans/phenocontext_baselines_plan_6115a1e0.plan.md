@@ -28,7 +28,7 @@ todos:
     status: done
   - id: m8_baseline_biobert
     content: "M8: Baseline 2 BioBERT-only — runner with --stage biobert_only, fixed 0.5 threshold; checkpoint: artifacts under experiments/baseline_biobert/ and tests/test_baseline_biobert.py asserts artifact structure (not metric values)"
-    status: pending
+    status: done
   - id: m9_baseline_rules_biobert
     content: "M9: Baseline 3 rules-first + BioBERT fallback at 0.5 — runner with --stage rules_then_biobert_default; add per-source coverage to metrics.json; checkpoint: tests/test_baseline_rules_then_biobert.py asserts source distribution on synthetic mix"
     status: pending
