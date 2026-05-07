@@ -1,23 +1,57 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
 ## Project Status
 
-This is a design-stage project. The two source-of-truth planning documents are:
-- `PROJECT_OVERVIEW.md` — architecture, label ontology, data objects, design patterns
-- `plan.md` — 14-phase development roadmap with milestones and decision criteria
+Environment setup complete (Phases 0–11). The repo is ready for the modeling
+roadmap defined in `PROJECT_OVERVIEW.md`.
 
-No code exists yet. When implementing, follow these documents carefully — they contain deliberate design choices that should not be overridden without a clear reason.
+**Pending:** Phase 11 Docker build checkpoint not yet verified — see
+`docs/decision_log.md` for the exact commands and the ARM64 platform note.
 
 ## What This System Does
 
-**PhenoContext** classifies the context of phenotype mentions in clinical notes. Given a phenotype mention (from an upstream NER system) + a context window, it assigns multi-hot labels from a 4-class ontology:
+**PhenoContext** classifies the context of phenotype mentions in clinical notes.
+Given a phenotype mention (from upstream NER) + a context window, it assigns
+multi-hot labels from a 4-class ontology (defined in `src/ods_phenocontext/schema.py`):
 
 - `confirmed` — phenotype affirmed for the patient
 - `negated` — explicitly negated
 - `associated_with_someone_else` — attributed to a non-patient experiencer
-- `other_non_patient` — umbrella for uncertainty, hypothetical, historical, screening, etc.
+- `other_non_patient` — umbrella for uncertainty, hypothetical, historical, screening
+
+## Repository Layout
+
+```
+src/ods_phenocontext/
+  __init__.py               # package root, __version__
+  schema.py                 # Instance, SyntheticAudit, TrainingManifest + LABEL_NAMES
+  pipeline.py               # phenocontext_predict, RulesModel/BioBERTModel Protocols
+  rules/__init__.py          # placeholder; real rules loaded from rules/*.yaml
+  models/
+    __init__.py
+    biobert.py              # BioBERTMultiLabel (encoder + linear head stub)
+  teachers/
+    __init__.py
+    bedrock_client.py       # ChatBedrock wrapper, TeacherOutput schema, build_committee()
+
+tests/
+  test_smoke.py             # trivial harness check
+  test_schema.py            # Instance / SyntheticAudit / TrainingManifest
+  test_pipeline_smoke.py    # both pipeline branches (rules confident, rules abstain)
+  test_environment.py       # Python 3.11, torch device, BERT forward pass, BioBERT shape
+  integration/
+    test_bedrock_live.py    # live Bedrock round-trip (RUN_BEDROCK_INTEGRATION=1)
+
+data/{gold,silver,synthetic,processed}/   # gitignored — never commit PHI
+audits/{teacher_outputs,synthetic_provenance,training_manifests}/
+configs/                    # per-iteration YAML configs
+prompts/                    # versioned teacher and generation prompts
+rules/                      # versioned YAML rule files
+docs/
+  decision_log.md           # non-obvious choices, deferrals, and deferred items
+```
 
 ## Core Architecture
 
@@ -28,93 +62,70 @@ The deployed system is a **rules-first, BioBERT-fallback pipeline** — not an L
 3. Apply per-label thresholds to BioBERT sigmoid outputs
 4. Return labels, probabilities, and prediction source
 
-LLMs (teacher committee) are used only during development and refresh cycles, not at inference time.
+LLMs (teacher committee) are used **only during development and refresh cycles**,
+not at inference time. Teacher deps (`langchain`, `langchain-aws`, `boto3`) are
+in an opt-in `[teacher]` dependency group and are absent from the production image.
 
-### BioBERT Classifier
+### Key source files
 
-- Single encoder model with 4 label outputs (not 4 separate classifiers)
-- `sigmoid` activation + `BCEWithLogitsLoss`
-- Per-label threshold tuning on validation set — do not assume 0.5
-- Optional per-label positive weights and sample weights for data mixing
+| File | Purpose |
+|---|---|
+| `schema.py` | Single source of truth for all data structures |
+| `pipeline.py` | `phenocontext_predict` + `RulesModel`/`BioBERTModel` Protocols |
+| `models/biobert.py` | `BioBERTMultiLabel` — backbone encoder + 4-label linear head |
+| `teachers/bedrock_client.py` | `build_committee()` returning 3 role-tuned LangChain runnables |
 
-### Rule System
+## Environment
 
-- Rules produce label-specific confidence scores (not binary decisions)
-- Rules can abstain; abstention routes to BioBERT
-- Rule confidence is empirically estimated by rule family, not assumed
-- Rules are versioned; maintain a rule manifest (ID, definition, target label, confidence, version)
+```bash
+make dev          # install runtime + dev deps + pre-commit hooks
+make test         # run pytest
+make lint         # ruff check
+make format       # ruff format + fix
+make typecheck    # mypy src
 
-### Teacher Committee (Development Only)
+# Teacher group (requires AWS credentials + Bedrock access in us-east-2)
+uv sync --group dev --group teacher
+RUN_BEDROCK_INTEGRATION=1 uv run --group teacher pytest tests/integration/ -v
 
-- 3–4 LLMs with intentional role diversity: generalist, precision-biased, recall-biased, optional mechanistic/rule-aware
-- Structured output: `{"labels": [...], "rationale": "...", "evidence_spans": [...], "confidence_bin": "high|medium|low"}`
-- Aggregation uses heuristic weights (generalist: 0.4, precision: 0.25, recall: 0.2, mechanistic: 0.15); can evolve to learned per-label weights
-- Run only on targeted subsets (rule/BioBERT discordant cases, low-confidence BioBERT, rare labels, FP/FN slices) — not full corpus
-
-## Key Data Object
-
-```python
-@dataclass
-class Instance:
-    instance_id: str
-    note_id: str
-    entity_text: str
-    context_window: str
-    split: str                              # train / val / test / production
-    gold_labels: Optional[List[int]] = None
-    rule_labels: Optional[List[int]] = None
-    rule_probs: Optional[List[float]] = None
-    rule_ids: Optional[List[str]] = None
-    rule_abstained: bool = False
-    biobert_probs: Optional[List[float]] = None
-    biobert_labels: Optional[List[int]] = None
-    teacher_outputs: Dict[str, dict] = field(default_factory=dict)
-    aggregated_teacher_labels: Optional[List[int]] = None
-    disagreement_score: Optional[float] = None
-    source_type: str = "original"           # original / synthetic / silver
-    parent_instance_id: Optional[str] = None
+# Docker (production image — excludes dev + teacher)
+docker build --platform linux/amd64 -t ods-phenocontext:dev .
 ```
+
+**Python:** 3.11 (pinned via `.python-version` and `requires-python`).
+**Torch:** `>=2.6` — minimum enforced by transformers 5.x (CVE-2025-32434).
+**Teacher model:** `us.anthropic.claude-sonnet-4-6` in `us-east-2`.
 
 ## Non-Negotiable Design Constraints
 
-These are explicit decisions from the design documents — do not change without justification:
+Do not change these without a clear documented reason in `docs/decision_log.md`:
 
-1. **Gold labels are primary truth.** Teacher labels are development signals, not gold replacements.
-2. **Fixed validation set.** Keep frozen throughout all development. Do not tune thresholds then evaluate on the same data in the same pass.
-3. **Reinitialize from base checkpoint** each retraining iteration (not continual fine-tuning), unless warm-start is explicitly justified.
-4. **Cap synthetic augmentation** at 20–40% of original gold training size. Never let synthetic data dominate training.
-5. **Do not build a learned router first.** The rules-first + abstention → BioBERT pattern is the default. Only add a stacked ensemble or learned router if validation metrics justify it.
-6. **Validate synthetic batches** before adding to training: label preservation by 2/3 teachers, embedding similarity threshold, lexical diversity, deduplication, manual spot review.
+1. **Gold labels are primary truth.** Teacher labels are development signals only.
+2. **Fixed validation set.** Never tune thresholds and evaluate on the same data.
+3. **Reinitialize from base checkpoint** each retraining iteration (no continual fine-tuning
+   unless explicitly justified).
+4. **Cap synthetic augmentation** at 20–40% of original gold training size.
+5. **No learned router first.** Rules-first + abstention → BioBERT is the default.
+   Add a stacked ensemble only if validation metrics justify it.
+6. **Validate synthetic batches** before training: label preservation by 2/3 teachers,
+   embedding similarity, lexical diversity, dedup, manual spot review.
 
-## Reproducibility: Required Artifacts Per Iteration
+## Reproducibility Artifacts (required per iteration)
 
-Every iteration must produce a `TrainingManifest` capturing: iteration number, base model checkpoint, rule version, teacher models + weights + prompt versions, training data counts by source and label, per-label thresholds, validation metrics.
+Every training iteration must produce a `TrainingManifest` (see `schema.py`) and
+update the following:
 
-Maintain across the project lifetime:
-- Dataset split manifest (IDs, split assignment, date, exclusion criteria)
-- Rule manifest
-- Prompt registry (text, version, model, intended teacher role)
-- Synthetic data audit (parent ID, target labels, validation checks, approval status)
-- Experiment registry + stage comparison reports
-- Decision log
-
-## Suggested Directory Layout
-
-```
-project/
-├── data/{gold,silver,synthetic,processed}/
-├── prompts/                    # versioned teacher and generation prompts
-├── rules/                      # versioned YAML rule files
-├── models/                     # checkpoints per iteration
-├── audits/{teacher_outputs,synthetic_provenance,training_manifests}/
-├── docs/                       # label_ontology, annotation_guidelines, manifests, logs
-├── experiments/                # per-stage result directories
-├── src/                        # run_rules, run_teachers, aggregate_teachers,
-│                               # generate_synthetics, validate_synthetics,
-│                               # train_biobert, evaluate, pipeline
-└── configs/                    # per-iteration YAML configs
-```
+- `audits/training_manifests/` — serialized `TrainingManifest`
+- `audits/teacher_outputs/` — raw teacher responses for audited instances
+- `audits/synthetic_provenance/` — `SyntheticAudit` records for every generated example
+- `docs/decision_log.md` — rationale for any new design choice or deferral
 
 ## Clinical Data Constraints
 
-This system processes clinical notes containing PHI. All data handling must comply with HIPAA. Do not log raw note text or entity spans to stdout or files outside controlled data directories.
+This system processes clinical notes containing PHI. All data handling must comply
+with HIPAA:
+
+- `data/` is gitignored — never commit clinical notes, PHI, or derived data
+- Tests use only synthetic strings — no real note text in any test file
+- Do not log raw note text or entity spans to stdout or files outside `data/`
+- The production Docker image has no AWS credentials and no langchain/boto3
