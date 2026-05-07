@@ -62,10 +62,10 @@ class ExperimentResult:
 
 
 class _NullBioBERT:
-    """Stub that raises if called — used for rules_only stage."""
+    """Stub — should never be called; exists only to satisfy type signatures."""
 
     def predict_proba(self, instance: Instance) -> list[float]:
-        raise RuntimeError("BioBERT should not be called in rules_only stage")
+        raise RuntimeError("BioBERT called in a stage that should not use it")
 
 
 class _NullRules:
@@ -122,36 +122,66 @@ def run_experiment(
 
     thresholds = config.threshold_list
     predictions: list[dict] = []
+    rule_id_counts: dict[str, int] = {}
+    n_abstained = 0
 
     for inst in eval_instances:
-        result = phenocontext_predict(
-            instance=inst,
-            rules_model=effective_rules,
-            biobert_model=effective_biobert,
-            thresholds=thresholds,
-        )
-
-        # Populate instance prediction fields for metric computation
-        if result["source"] == "rules":
-            inst.rule_labels = result["labels"]
-            inst.rule_probs = result["probs"]
-            inst.rule_abstained = False
+        if config.stage == "rules_only":
+            # Run rules directly; treat abstentions as no-prediction (all zeros)
+            rule_output = effective_rules(inst)
+            inst.rule_abstained = rule_output["abstained"]
+            if rule_output["abstained"]:
+                n_abstained += 1
+                inst.rule_labels = [0] * NUM_LABELS
+                inst.rule_probs = [0.0] * NUM_LABELS
+            else:
+                inst.rule_labels = rule_output["labels"]
+                inst.rule_probs = rule_output["probs"]
+            for rid in rule_output.get("rule_ids", []):
+                rule_id_counts[rid] = rule_id_counts.get(rid, 0) + 1
+            predictions.append(
+                {
+                    "instance_id": inst.instance_id,
+                    "source": "rules",
+                    "abstained": rule_output["abstained"],
+                    "labels": inst.rule_labels,
+                    "probs": inst.rule_probs,
+                    "rule_ids": rule_output.get("rule_ids", []),
+                    "gold_labels": inst.gold_labels,
+                }
+            )
         else:
-            inst.rule_abstained = True
-            inst.biobert_labels = result["labels"]
-            inst.biobert_probs = result["probs"]
-
-        predictions.append(
-            {
-                "instance_id": inst.instance_id,
-                "source": result["source"],
-                "labels": result["labels"],
-                "probs": result["probs"],
-                "gold_labels": inst.gold_labels,
-            }
-        )
+            result = phenocontext_predict(
+                instance=inst,
+                rules_model=effective_rules,
+                biobert_model=effective_biobert,
+                thresholds=thresholds,
+            )
+            if result["source"] == "rules":
+                inst.rule_labels = result["labels"]
+                inst.rule_probs = result["probs"]
+                inst.rule_abstained = False
+                for rid in result.get("rule_ids", []):
+                    rule_id_counts[rid] = rule_id_counts.get(rid, 0) + 1
+            else:
+                inst.rule_abstained = True
+                n_abstained += 1
+                inst.biobert_labels = result["labels"]
+                inst.biobert_probs = result["probs"]
+            predictions.append(
+                {
+                    "instance_id": inst.instance_id,
+                    "source": result["source"],
+                    "labels": result["labels"],
+                    "probs": result["probs"],
+                    "gold_labels": inst.gold_labels,
+                }
+            )
 
     metrics = compute_metrics(eval_instances)
+    n_total = len(eval_instances)
+    metrics["abstention_rate"] = n_abstained / n_total if n_total else 0.0
+    metrics["rule_id_counts"] = rule_id_counts
 
     return ExperimentResult(
         config=config,

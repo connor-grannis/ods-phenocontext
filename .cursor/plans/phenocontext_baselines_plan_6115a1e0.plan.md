@@ -25,7 +25,7 @@ todos:
     status: done
   - id: m7_baseline_rules
     content: "M7: Baseline 1 rules-only — wire experiment runner with --stage rules_only, capture abstention rate + rule_id frequency + coverage; checkpoint: synthetic-fixture run produces artifacts under experiments/baseline_rules/ and tests/test_baseline_rules.py passes"
-    status: pending
+    status: done
   - id: m8_baseline_biobert
     content: "M8: Baseline 2 BioBERT-only — runner with --stage biobert_only, fixed 0.5 threshold; checkpoint: artifacts under experiments/baseline_biobert/ and tests/test_baseline_biobert.py asserts artifact structure (not metric values)"
     status: pending
