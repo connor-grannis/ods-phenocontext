@@ -1,0 +1,45 @@
+# Mirrors .gitignore and additionally excludes dev/test artifacts.
+# Keep the image lean: only src/ and the lockfile matter at runtime.
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environment (rebuilt inside the image by uv)
+.venv/
+
+# Clinical data — never bake into an image
+/data/
+/models/
+/audits/
+
+# Secrets
+.env
+
+# Dev/test artifacts — not needed at inference time
+tests/
+notebooks/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+*.ipynb
+
+# Docs and planning
+docs/
+.cursor/
+.claude/
+
+# Git
+.git/
+.gitignore
+
+# macOS
+.DS_Store
