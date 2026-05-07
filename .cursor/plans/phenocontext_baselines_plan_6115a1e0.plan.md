@@ -7,7 +7,7 @@ todos:
     status: done
   - id: m1_schema
     content: "M1: extend schema.py with __post_init__ validators (label length, split values, source_type rules, parent_instance_id constraint), Instance.from_raw factory (no preprocessor arg — text is canonical on arrival), to_dict/from_dict on Instance/SyntheticAudit/TrainingManifest; checkpoint: tests/test_schema.py + tests/test_schema_validation.py pass"
-    status: pending
+    status: done
   - id: m2_loader
     content: "M2: build src/ods_phenocontext/data/{split_manifest.py, loader.py, __main__.py} (Click CLI), enforce note_id-not-cross-split, honor exclusion_reason, never log raw text; checkpoint: tests/test_data_loader.py passes on synthetic fixture. NOTE: label_ontology.md and data_split_manifest.md docs deferred — not blocking for baselines."
     status: done
@@ -19,7 +19,7 @@ todos:
     status: done
   - id: m5_eval_threshold
     content: "M5: build src/ods_phenocontext/evaluate.py (per-label P/R/F1, micro/macro F1, PR-AUC, source coverage, slicing helpers) and src/ods_phenocontext/threshold_tuning.py (per-label sweep on val; assert split=='val'; write audits/thresholds_v<n>.json); checkpoint: tests/test_evaluate.py + tests/test_threshold_tuning.py pass"
-    status: pending
+    status: done
   - id: m6_experiments
     content: "M6: build src/ods_phenocontext/experiments.py (ExperimentRun + run_experiment writing TrainingManifest + predictions.jsonl + metrics.json under experiments/<name>/, idempotent registry update of docs/experiment_registry.md); checkpoint: tests/test_experiments.py passes"
     status: pending
