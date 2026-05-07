@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environment (uv manages this)
+.venv/
+
+# Data — never commit clinical notes, PHI, or large datasets
+data/
+
+# Model checkpoints — too large and potentially contain training data artifacts
+models/
+
+# Audit trails — may contain PHI-adjacent metadata
+audits/
+
+# Secrets and environment config
+.env
+
+# Tool caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# macOS
+.DS_Store
