@@ -2,7 +2,7 @@
 # All commands run inside the uv-managed virtual environment.
 # Prerequisites: uv installed (https://docs.astral.sh/uv/).
 
-.PHONY: setup dev test lint format typecheck lock clean data help
+.PHONY: setup dev test lint format typecheck lock clean data train help
 
 DATA_SRC    := data/all_training_samples.parquet
 DATA_MANIFEST := data/gold/split_manifest.jsonl
@@ -19,6 +19,7 @@ help:
 	@echo "  typecheck  Run mypy"
 	@echo "  lock       Regenerate uv.lock without upgrading"
 	@echo "  data       Build split manifest and process instances JSONL"
+	@echo "  train      Fine-tune BioBERT (set TRAIN_OUT to override output dir)"
 	@echo "  clean      Remove .venv and cache directories"
 
 setup:
@@ -54,6 +55,14 @@ data: $(DATA_SRC)
 		--input $(DATA_SRC) \
 		--manifest $(DATA_MANIFEST) \
 		--out $(DATA_OUT)
+
+TRAIN_OUT ?= checkpoints/biobert_v1
+
+train: $(DATA_MANIFEST)
+	uv run python -m ods_phenocontext.train_biobert \
+		--parquet  $(DATA_SRC) \
+		--manifest $(DATA_MANIFEST) \
+		--out      $(TRAIN_OUT)
 
 clean:
 	rm -rf .venv .ruff_cache .mypy_cache .pytest_cache
