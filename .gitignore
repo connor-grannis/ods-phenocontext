@@ -13,13 +13,13 @@ build/
 .venv/
 
 # Data — never commit clinical notes, PHI, or large datasets
-data/
+/data/
 
 # Model checkpoints — too large and potentially contain training data artifacts
-models/
+/models/
 
 # Audit trails — may contain PHI-adjacent metadata
-audits/
+/audits/
 
 # Secrets and environment config
 .env
