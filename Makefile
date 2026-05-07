@@ -1,0 +1,44 @@
+# Makefile — single source of truth for contributor commands.
+# All commands run inside the uv-managed virtual environment.
+# Prerequisites: uv installed (https://docs.astral.sh/uv/).
+
+.PHONY: setup dev test lint format typecheck lock clean help
+
+# Default target
+help:
+	@echo "Available targets:"
+	@echo "  setup      Install runtime deps (no dev/teacher)"
+	@echo "  dev        Install all dev deps + pre-commit hooks"
+	@echo "  test       Run test suite"
+	@echo "  lint       Check code style with ruff"
+	@echo "  format     Auto-format with ruff"
+	@echo "  typecheck  Run mypy"
+	@echo "  lock       Regenerate uv.lock without upgrading"
+	@echo "  clean      Remove .venv and cache directories"
+
+setup:
+	uv sync
+
+dev:
+	uv sync --group dev --extra rules
+	uv run pre-commit install
+
+test:
+	uv run --group dev pytest
+
+lint:
+	uv run --group dev ruff check .
+
+format:
+	uv run --group dev ruff format .
+	uv run --group dev ruff check --fix .
+
+typecheck:
+	uv run --group dev mypy src
+
+# Regenerate the lockfile from current pyproject.toml without upgrading deps
+lock:
+	uv lock
+
+clean:
+	rm -rf .venv .ruff_cache .mypy_cache .pytest_cache
