@@ -37,7 +37,7 @@ todos:
     status: done
   - id: m11_stage_compare
     content: "M11: build src/ods_phenocontext/stage_compare.py producing experiments/stage_comparison_v1.md (per-label deltas, source coverage shifts, links to manifests); update docs/experiment_registry.md with Iteration 0 baselines section; checkpoint: stage_comparison_v1.md is non-empty and tests/test_stage_compare.py passes"
-    status: pending
+    status: done
 isProject: false
 ---
 
