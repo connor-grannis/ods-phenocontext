@@ -16,6 +16,7 @@ from ods_phenocontext.schema import NUM_LABELS, Instance
 # Fakes
 # ---------------------------------------------------------------------------
 
+
 def _make_instance() -> Instance:
     return Instance(
         instance_id="t-001",
@@ -63,6 +64,7 @@ class _FakeBioBERT:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_pipeline_uses_rules_when_confident():
     result = phenocontext_predict(

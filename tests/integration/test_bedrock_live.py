@@ -28,10 +28,7 @@ def test_bedrock_committee_round_trip() -> None:
 
     # Synthetic note snippet — no PHI.
     test_input = HumanMessage(
-        content=(
-            "Context: 'The patient denies any history of asthma.' "
-            "Entity: asthma"
-        )
+        content=("Context: 'The patient denies any history of asthma.' Entity: asthma")
     )
 
     for role, teacher in committee.items():

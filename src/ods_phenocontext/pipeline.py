@@ -20,6 +20,7 @@ from ods_phenocontext.schema import Instance
 # Protocols — define the interface each model component must satisfy
 # ---------------------------------------------------------------------------
 
+
 class RulesModel(Protocol):
     """Interface for the rule system."""
 
@@ -45,6 +46,7 @@ class BioBERTModel(Protocol):
 # ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
+
 
 def phenocontext_predict(
     instance: Instance,

@@ -28,6 +28,7 @@ def _make_instance(**kwargs) -> Instance:
 
 # --- Instance ---
 
+
 def test_instance_minimal_fields():
     inst = _make_instance()
     assert inst.instance_id == "i-001"
@@ -74,6 +75,7 @@ def test_instance_synthetic_provenance():
 
 
 # --- SyntheticAudit ---
+
 
 def test_synthetic_audit_approved_when_all_checks_pass():
     audit = SyntheticAudit(
@@ -127,6 +129,7 @@ def test_synthetic_audit_not_approved_when_no_checks():
 
 # --- TrainingManifest ---
 
+
 def test_training_manifest_fields():
     manifest = TrainingManifest(
         iteration=1,
@@ -140,12 +143,16 @@ def test_training_manifest_fields():
         num_synthetic=100,
         synthetic_ratio=0.2,
         label_distribution={
-            "confirmed": 300, "negated": 150,
-            "associated_with_someone_else": 50, "other_non_patient": 80,
+            "confirmed": 300,
+            "negated": 150,
+            "associated_with_someone_else": 50,
+            "other_non_patient": 80,
         },
         thresholds={
-            "confirmed": 0.5, "negated": 0.45,
-            "associated_with_someone_else": 0.55, "other_non_patient": 0.5,
+            "confirmed": 0.5,
+            "negated": 0.45,
+            "associated_with_someone_else": 0.55,
+            "other_non_patient": 0.5,
         },
         validation_metrics={"macro_f1": 0.82, "f1_confirmed": 0.88},
     )

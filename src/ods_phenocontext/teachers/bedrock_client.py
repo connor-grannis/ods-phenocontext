@@ -40,6 +40,7 @@ except ImportError:
 # Structured output schema (mirrors teacher contract from PROJECT_OVERVIEW.md)
 # ---------------------------------------------------------------------------
 
+
 class TeacherOutput(BaseModel):
     """Pydantic schema for a single teacher's structured response."""
 
@@ -55,6 +56,7 @@ class TeacherOutput(BaseModel):
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def build_teacher(
     model_id: str,
@@ -83,10 +85,7 @@ def build_teacher(
         ImportError: if the teacher dependency group is not installed.
     """
     if not _TEACHER_DEPS_AVAILABLE:
-        raise ImportError(
-            "Teacher dependencies are not installed. "
-            "Run: uv sync --group teacher"
-        )
+        raise ImportError("Teacher dependencies are not installed. Run: uv sync --group teacher")
 
     # langchain-aws stubs are incomplete; model_id/region_name are valid runtime
     # fields (confirmed via ChatBedrock.model_fields) but missing from type stubs.
