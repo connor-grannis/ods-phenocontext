@@ -22,7 +22,7 @@ todos:
     status: done
   - id: m6_experiments
     content: "M6: build src/ods_phenocontext/experiments.py (ExperimentRun + run_experiment writing TrainingManifest + predictions.jsonl + metrics.json under experiments/<name>/, idempotent registry update of docs/experiment_registry.md); checkpoint: tests/test_experiments.py passes"
-    status: pending
+    status: done
   - id: m7_baseline_rules
     content: "M7: Baseline 1 rules-only — wire experiment runner with --stage rules_only, capture abstention rate + rule_id frequency + coverage; checkpoint: synthetic-fixture run produces artifacts under experiments/baseline_rules/ and tests/test_baseline_rules.py passes"
     status: pending
