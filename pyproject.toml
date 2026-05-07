@@ -23,6 +23,11 @@ dependencies = [
     "transformers>=5.8.0",
 ]
 
+[project.optional-dependencies]
+rules = [
+    "spacy>=3.8.14",
+]
+
 # Cross-platform torch: PyPI (MPS-capable) on macOS; CUDA 12.4 wheel index on Linux.
 # The marker is evaluated at lock time per platform so both are in the lockfile.
 [[tool.uv.index]]
