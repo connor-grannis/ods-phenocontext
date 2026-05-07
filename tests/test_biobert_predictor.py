@@ -22,7 +22,7 @@ def predictor() -> BioBERTPredictor:
     return BioBERTPredictor(model_path=MODEL)
 
 
-def _inst(context: str = "Patient has fever.", entity: str = "fever") -> Instance:
+def _inst(context: str = "Patient has [ENT] fever [/ENT].", entity: str = "fever") -> Instance:
     return Instance(
         instance_id="t-001",
         note_id="n-001",
@@ -52,14 +52,23 @@ class TestPredictProba:
         assert all(isinstance(p, float) for p in probs)
 
     def test_different_inputs_produce_different_probs(self, predictor: BioBERTPredictor):
-        probs_a = predictor.predict_proba(_inst("Patient has fever."))
-        probs_b = predictor.predict_proba(_inst("No fever noted."))
+        probs_a = predictor.predict_proba(_inst("Patient has [ENT] fever [/ENT]."))
+        probs_b = predictor.predict_proba(_inst("No [ENT] fever [/ENT] noted."))
         assert probs_a != probs_b
 
     def test_long_input_truncated_without_error(self, predictor: BioBERTPredictor):
-        long_text = "fever " * 300
+        long_text = "word " * 200 + "[ENT] fever [/ENT]" + " word" * 100
         probs = predictor.predict_proba(_inst(long_text))
         assert len(probs) == NUM_LABELS
+
+    def test_entity_span_pooling_used(self, predictor: BioBERTPredictor):
+        # With [ENT]/[/ENT] markers the model should use entity-span pooling;
+        # verify token IDs are set (smoke check that setup was correct)
+        assert predictor.model._ent_token_id is not None
+        assert predictor.model._end_token_id is not None
+        # The special tokens should tokenize to single IDs, not subwords
+        ent_ids = predictor.tokenizer.encode("[ENT]", add_special_tokens=False)
+        assert len(ent_ids) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +99,7 @@ class TestPredict:
 class TestPipelineIntegration:
     def test_abstain_instance_routed_to_biobert(self, predictor: BioBERTPredictor):
         # "can" triggers llm_review → rules abstain → BioBERT fallback
-        instance = _inst("Diabetes can cause neuropathy.", entity="diabetes")
+        instance = _inst("[ENT] Diabetes [/ENT] can cause neuropathy.", entity="Diabetes")
         result = phenocontext_predict(
             instance=instance,
             rules_model=RuleClassifier(),
@@ -104,7 +113,7 @@ class TestPipelineIntegration:
         assert all(0.0 <= p <= 1.0 for p in result["probs"])
 
     def test_confident_instance_not_routed_to_biobert(self, predictor: BioBERTPredictor):
-        instance = _inst("No fever noted.", entity="fever")
+        instance = _inst("No [ENT] fever [/ENT] noted.", entity="fever")
         result = phenocontext_predict(
             instance=instance,
             rules_model=RuleClassifier(),

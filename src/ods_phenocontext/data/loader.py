@@ -23,7 +23,6 @@ see docs/decision_log.md).
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -31,13 +30,6 @@ import pandas as pd
 
 from ods_phenocontext.data.split_manifest import ManifestRow, load_manifest
 from ods_phenocontext.schema import Instance
-
-# Pattern to strip [ENT] / [/ENT] markup from context windows
-_ENT_TAG = re.compile(r"\[/?ENT\]", re.IGNORECASE)
-
-
-def _strip_ent_tags(text: str) -> str:
-    return _ENT_TAG.sub("", text)
 
 
 def _row_to_instance(row: pd.Series, manifest_row: ManifestRow) -> Instance:
@@ -49,11 +41,13 @@ def _row_to_instance(row: pd.Series, manifest_row: ManifestRow) -> Instance:
 
     gold_labels = [int(confirmed), int(negated), int(family), int(hypothetical)]
 
+    # Keep [ENT]/[/ENT] tags — they mark entity span for both the rule engine
+    # (pre/post splitting) and BioBERT (entity-span pooling).
     return Instance.from_raw(
         instance_id=manifest_row.instance_id,
         note_id=manifest_row.note_id,
         entity_text=str(row["entity"]),
-        context_window=_strip_ent_tags(str(row["text"])),
+        context_window=str(row["text"]),
         split=manifest_row.split,
         gold_labels=gold_labels,
     )

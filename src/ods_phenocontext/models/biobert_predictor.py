@@ -1,16 +1,21 @@
 """
 BioBERTPredictor: Instance-level adapter for BioBERTMultiLabel.
 
-BioBERTMultiLabel.predict_proba takes raw tensors; this adapter handles
-tokenization so the pipeline can pass an Instance directly.  Closes the
-gap described in the baselines plan (M4).
+Handles tokenization (with [ENT]/[/ENT] as special tokens) and delegates to
+BioBERTMultiLabel's entity-span pooling forward pass.
 
-Does not re-apply preprocessing — Instance.context_window is canonical.
+Does not re-apply preprocessing — Instance.context_window is canonical and
+expected to contain [ENT]...[/ENT] markup around the phenotype mention.
 """
 
 from __future__ import annotations
 
-from ods_phenocontext.models.biobert import BioBERTMultiLabel
+from ods_phenocontext.models.biobert import (
+    ENTITY_END_TOKEN,
+    ENTITY_START_TOKEN,
+    SPECIAL_TOKENS,
+    BioBERTMultiLabel,
+)
 from ods_phenocontext.schema import Instance
 
 
@@ -18,6 +23,11 @@ class BioBERTPredictor:
     """Tokenizing adapter that wraps BioBERTMultiLabel for Instance-level inference.
 
     Conforms to the BioBERTModel Protocol defined in pipeline.py.
+
+    On construction:
+      1. Loads the tokenizer and adds [ENT]/[/ENT] as special tokens.
+      2. Resizes model embeddings to match the expanded vocab.
+      3. Registers entity marker token IDs with the model for span pooling.
 
     Args:
         model_path:  HF model ID or local checkpoint directory.
@@ -33,8 +43,16 @@ class BioBERTPredictor:
 
         self.model_path = model_path
         self.max_length = max_length
+
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.tokenizer.add_special_tokens({"additional_special_tokens": SPECIAL_TOKENS})
+
         self.model = BioBERTMultiLabel(model_name=model_path)
+        self.model.resize_token_embeddings(len(self.tokenizer))
+
+        ent_id = self.tokenizer.convert_tokens_to_ids(ENTITY_START_TOKEN)
+        end_id = self.tokenizer.convert_tokens_to_ids(ENTITY_END_TOKEN)
+        self.model.set_entity_token_ids(ent_id, end_id)
 
     def predict_proba(self, instance: Instance) -> list[float]:
         """Tokenize instance.context_window and return per-label sigmoid probabilities."""

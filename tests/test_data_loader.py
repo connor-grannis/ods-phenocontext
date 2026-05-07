@@ -14,7 +14,6 @@ import pytest
 
 from ods_phenocontext.data.loader import (
     _instance_id,
-    _strip_ent_tags,
     build_manifest_from_parquet,
     load_instances,
 )
@@ -200,20 +199,14 @@ def full_manifest(synthetic_parquet: Path, tmp_path: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# _strip_ent_tags
+# ENT tags preserved in context_window
 # ---------------------------------------------------------------------------
 
 
-def test_strip_ent_tags_removes_markup():
-    assert _strip_ent_tags("Patient has [ENT]asthma[/ENT].") == "Patient has asthma."
-
-
-def test_strip_ent_tags_case_insensitive():
-    assert _strip_ent_tags("[ent]fever[/ent]") == "fever"
-
-
-def test_strip_ent_tags_no_tags_unchanged():
-    assert _strip_ent_tags("plain text") == "plain text"
+def test_ent_tags_preserved_in_context_window(synthetic_parquet: Path, full_manifest: Path):
+    instances = list(load_instances(synthetic_parquet, full_manifest))
+    tagged = [i for i in instances if "[ENT]" in i.context_window]
+    assert len(tagged) == len(_SYNTHETIC_ROWS)
 
 
 # ---------------------------------------------------------------------------
@@ -326,10 +319,10 @@ class TestLoadInstances:
         inst = next(i for i in instances if i.entity_text == "anemia")
         assert inst.gold_labels == [0, 1, 1, 0]
 
-    def test_ent_tags_stripped(self, synthetic_parquet: Path, full_manifest: Path):
+    def test_ent_tags_preserved(self, synthetic_parquet: Path, full_manifest: Path):
         for inst in load_instances(synthetic_parquet, full_manifest):
-            assert "[ENT]" not in inst.context_window
-            assert "[/ENT]" not in inst.context_window
+            assert "[ENT]" in inst.context_window
+            assert "[/ENT]" in inst.context_window
 
     def test_split_assigned_from_manifest(self, synthetic_parquet: Path, tmp_path: Path):
         rows = [
