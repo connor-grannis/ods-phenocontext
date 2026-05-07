@@ -4,6 +4,34 @@ Tracks non-obvious design choices, deferred items, and the rationale behind them
 
 ---
 
+## 2026-05-07 — Phase 11 Docker build incomplete (ARM64 platform mismatch)
+
+**Status:** In progress — Dockerfile and `.dockerignore` committed; build
+checkpoint not yet verified.
+
+**What works:** The multi-stage Dockerfile builds correctly when run with
+`--platform linux/amd64`. The lockfile was updated with `required-environments`
+so both the macOS MPS wheel and the Linux CUDA wheel are pre-resolved.
+
+**What's pending:** The build was interrupted mid-download during the initial
+run. To complete the Phase 11 checkpoint, run:
+
+```bash
+docker build --platform linux/amd64 -t ods-phenocontext:dev .
+# Should print "torch X.X.X | CUDA: False" (no GPU on Mac — acceptable)
+docker run --rm ods-phenocontext:dev python -c "import torch; print(torch.cuda.is_available())"
+# Must fail with ModuleNotFoundError
+docker run --rm ods-phenocontext:dev python -c "import langchain_aws"
+```
+
+**Root cause of ARM64 issue:** Docker Desktop on Apple Silicon runs Linux
+containers as `manylinux_2_36_aarch64`, but the PyTorch CUDA index
+(`pytorch-cu124`) only publishes `linux_x86_64` wheels. Fixed by adding
+`--platform linux/amd64` to the build command and adding `required-environments`
+to `pyproject.toml` so the lockfile pre-resolves the x86_64 wheel on macOS.
+
+---
+
 ## 2026-05-07 — medspacy deferred
 
 **Decision:** `medspacy` (ConText / NegEx) not added in Phase 5.
