@@ -143,3 +143,18 @@ the AWS console before use; record enabled model IDs and region here.
 **Enabled models:** `us.anthropic.claude-sonnet-4-6` in `us-east-2`.
 Bedrock model access must be granted in the AWS console for this region before
 any live call. Update this entry if additional model IDs are enabled.
+
+---
+
+## 2026-05-07 — Threshold tuning and evaluation use the same val set in Baseline 4
+
+**Decision:** In the `rules_then_biobert_tuned` baseline (M10), thresholds are
+tuned on the validation set and metrics are also reported on the validation set.
+
+**Caveat:** This means Baseline 4 val metrics are optimistically biased — the
+thresholds were chosen specifically to maximize F1 on this set. The comparison
+between Baseline 3 (default 0.5) and Baseline 4 (tuned) is still useful for
+confirming that threshold tuning works mechanically and quantifying the ceiling
+it provides, but the Baseline 4 val numbers should not be interpreted as a
+true hold-out estimate. Once real training data is available, thresholds will
+be tuned on val and reported on a held-out test split.

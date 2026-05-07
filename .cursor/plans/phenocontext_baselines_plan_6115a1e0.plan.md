@@ -34,7 +34,7 @@ todos:
     status: done
   - id: m10_baseline_tuned
     content: "M10: Baseline 4 rules-first + BioBERT + tuned thresholds — generate audits/thresholds_v1.json on val, rerun pipeline; document the 'tuned and evaluated on same val' caveat in docs/decision_log.md; checkpoint: tests/test_baseline_rules_then_biobert_tuned.py passes"
-    status: pending
+    status: done
   - id: m11_stage_compare
     content: "M11: build src/ods_phenocontext/stage_compare.py producing experiments/stage_comparison_v1.md (per-label deltas, source coverage shifts, links to manifests); update docs/experiment_registry.md with Iteration 0 baselines section; checkpoint: stage_comparison_v1.md is non-empty and tests/test_stage_compare.py passes"
     status: pending
