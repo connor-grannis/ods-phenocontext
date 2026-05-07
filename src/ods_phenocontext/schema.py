@@ -9,7 +9,7 @@ can be imported anywhere — including scripts that don't need torch or HF.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 
 # ---------------------------------------------------------------------------
 # Label ontology (index → name mapping)
@@ -73,6 +73,77 @@ class Instance:
     source_type: str = "original"  # "original" | "synthetic" | "silver"
     parent_instance_id: str | None = None  # Set for synthetic children
 
+    _VALID_SPLITS: frozenset[str] = field(
+        default=frozenset({"train", "val", "test", "production"}),
+        init=False,
+        repr=False,
+        compare=False,
+    )
+    _VALID_SOURCE_TYPES: frozenset[str] = field(
+        default=frozenset({"original", "synthetic", "silver"}),
+        init=False,
+        repr=False,
+        compare=False,
+    )
+
+    def __post_init__(self) -> None:
+        if self.split not in self._VALID_SPLITS:
+            raise ValueError(
+                f"split must be one of {sorted(self._VALID_SPLITS)!r}, got {self.split!r}"
+            )
+        if self.source_type not in self._VALID_SOURCE_TYPES:
+            valid = sorted(self._VALID_SOURCE_TYPES)
+            raise ValueError(f"source_type must be one of {valid!r}, got {self.source_type!r}")
+        if self.source_type != "original" and self.parent_instance_id is None:
+            raise ValueError(
+                f"parent_instance_id is required when source_type is {self.source_type!r}"
+            )
+        for field_name, value in [
+            ("gold_labels", self.gold_labels),
+            ("rule_labels", self.rule_labels),
+            ("rule_probs", self.rule_probs),
+            ("biobert_probs", self.biobert_probs),
+            ("biobert_labels", self.biobert_labels),
+        ]:
+            if value is not None and len(value) != NUM_LABELS:
+                raise ValueError(f"{field_name} must have length {NUM_LABELS}, got {len(value)}")
+
+    @classmethod
+    def from_raw(
+        cls,
+        instance_id: str,
+        note_id: str,
+        entity_text: str,
+        context_window: str,
+        split: str,
+        **kwargs,
+    ) -> Instance:
+        """Construct an Instance from raw ingestion fields.
+
+        Text is stored as-is; preprocessing is handled upstream before this
+        system receives the context window (see docs/decision_log.md).
+        """
+        return cls(
+            instance_id=instance_id,
+            note_id=note_id,
+            entity_text=entity_text,
+            context_window=context_window,
+            split=split,
+            **kwargs,
+        )
+
+    def to_dict(self) -> dict:
+        """Serialize to a JSON-compatible dict (no torch types)."""
+        return {k: v for k, v in asdict(self).items() if not k.startswith("_VALID_")}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Instance:
+        """Deserialize from a dict produced by to_dict()."""
+        known = {
+            f.name for f in cls.__dataclass_fields__.values() if not f.name.startswith("_VALID_")
+        }
+        return cls(**{k: v for k, v in data.items() if k in known})
+
 
 # ---------------------------------------------------------------------------
 # SyntheticAudit — provenance record for every generated example
@@ -101,6 +172,14 @@ class SyntheticAudit:
     def approved(self) -> bool:
         """True only if every validation check passed."""
         return bool(self.validation_checks) and all(self.validation_checks.values())
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> SyntheticAudit:
+        known = {f.name for f in cls.__dataclass_fields__.values()}
+        return cls(**{k: v for k, v in data.items() if k in known})
 
 
 # ---------------------------------------------------------------------------
@@ -133,3 +212,11 @@ class TrainingManifest:
     thresholds: dict[str, float]
     # Validation metrics (e.g. "f1_confirmed", "auc_negated", "macro_f1")
     validation_metrics: dict[str, float]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> TrainingManifest:
+        known = {f.name for f in cls.__dataclass_fields__.values()}
+        return cls(**{k: v for k, v in data.items() if k in known})

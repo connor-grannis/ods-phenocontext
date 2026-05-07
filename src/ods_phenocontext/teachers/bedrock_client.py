@@ -14,9 +14,14 @@ See PROJECT_OVERVIEW.md §Teacher Committee for role descriptions.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
+
+from ods_phenocontext.audit.llm_calls import LLMCostLogger
+
+_DEFAULT_AUDIT_LOG = Path("audits/teacher_outputs/llm_call_log.jsonl")
 
 if TYPE_CHECKING:
     # These are only resolved during type-checking, not at runtime, so they
@@ -63,18 +68,28 @@ def build_teacher(
     system_prompt: str,
     region_name: str = "us-east-2",
     temperature: float = 0.0,
+    teacher_role: str = "unknown",
+    audit_log: Path = _DEFAULT_AUDIT_LOG,
+    prompt_version: str = "unknown",
     **model_kwargs: Any,
 ) -> Runnable[Any, TeacherOutput]:
     """
     Return a LangChain runnable that sends a chat message to Bedrock and
     returns a structured TeacherOutput.
 
+    Every call is unconditionally audited by LLMCostLogger (appended to
+    audit_log).  Bypassing this by constructing ChatBedrock directly is
+    forbidden — see docs/decision_log.md.
+
     Args:
-        model_id:      Bedrock cross-region inference profile ID,
-                       e.g. "us.anthropic.claude-sonnet-4-6".
-        system_prompt: Role-specific instructions injected as a SystemMessage.
-        region_name:   AWS region where Bedrock access is provisioned.
-        temperature:   Sampling temperature; 0.0 for deterministic labels.
+        model_id:       Bedrock cross-region inference profile ID,
+                        e.g. "us.anthropic.claude-sonnet-4-6".
+        system_prompt:  Role-specific instructions injected as a SystemMessage.
+        region_name:    AWS region where Bedrock access is provisioned.
+        temperature:    Sampling temperature; 0.0 for deterministic labels.
+        teacher_role:   Role name written to the audit log (e.g. "generalist").
+        audit_log:      JSONL file to append LLMCallRecords to.
+        prompt_version: Prompt template version written to the audit log.
         **model_kwargs: Passed through to ChatBedrock (e.g. max_tokens).
 
     Returns:
@@ -87,12 +102,22 @@ def build_teacher(
     if not _TEACHER_DEPS_AVAILABLE:
         raise ImportError("Teacher dependencies are not installed. Run: uv sync --group teacher")
 
+    audit_log.parent.mkdir(parents=True, exist_ok=True)
+    cost_logger = LLMCostLogger(
+        log_path=audit_log,
+        model_id=model_id,
+        region=region_name,
+        teacher_role=teacher_role,
+        prompt_version=prompt_version,
+    )
+
     # langchain-aws stubs are incomplete; model_id/region_name are valid runtime
     # fields (confirmed via ChatBedrock.model_fields) but missing from type stubs.
     llm: ChatBedrock = _ChatBedrock(  # type: ignore[call-arg]
         model_id=model_id,
         region_name=region_name,
         temperature=temperature,
+        callbacks=[cost_logger],
         **model_kwargs,
     )
 
@@ -163,7 +188,10 @@ TEACHER_CONFIGS: dict[str, dict[str, Any]] = {
 }
 
 
-def build_committee() -> dict[str, Runnable[Any, TeacherOutput]]:
+def build_committee(
+    audit_log: Path = _DEFAULT_AUDIT_LOG,
+    prompt_version: str = "unknown",
+) -> dict[str, Runnable[Any, TeacherOutput]]:
     """
     Instantiate all teachers in TEACHER_CONFIGS.
 
@@ -176,6 +204,9 @@ def build_committee() -> dict[str, Runnable[Any, TeacherOutput]]:
             system_prompt=cfg["system_prompt"],
             region_name=cfg["region_name"],
             temperature=cfg["temperature"],
+            teacher_role=role,
+            audit_log=audit_log,
+            prompt_version=prompt_version,
         )
         for role, cfg in TEACHER_CONFIGS.items()
     }

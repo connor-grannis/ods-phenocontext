@@ -12,6 +12,7 @@ dependencies = [
     "huggingface-hub>=1.14.0",
     "numpy>=2.4.4",
     "pandas>=3.0.2",
+    "pyarrow>=24.0.0",
     "pydantic>=2.13.4",
     "pyyaml>=6.0.3",
     "safetensors>=0.7.0",

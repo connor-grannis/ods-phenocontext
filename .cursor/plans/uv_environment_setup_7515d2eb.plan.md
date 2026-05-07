@@ -41,7 +41,6 @@ todos:
 isProject: false
 ---
 
-
 # uv-Managed Python Environment Setup Plan
 
 ## Key Decisions (locked in)

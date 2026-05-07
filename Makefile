@@ -2,7 +2,11 @@
 # All commands run inside the uv-managed virtual environment.
 # Prerequisites: uv installed (https://docs.astral.sh/uv/).
 
-.PHONY: setup dev test lint format typecheck lock clean help
+.PHONY: setup dev test lint format typecheck lock clean data help
+
+DATA_SRC    := data/all_training_samples.parquet
+DATA_MANIFEST := data/gold/split_manifest.jsonl
+DATA_OUT    := data/processed/instances.jsonl
 
 # Default target
 help:
@@ -14,6 +18,7 @@ help:
 	@echo "  format     Auto-format with ruff"
 	@echo "  typecheck  Run mypy"
 	@echo "  lock       Regenerate uv.lock without upgrading"
+	@echo "  data       Build split manifest and process instances JSONL"
 	@echo "  clean      Remove .venv and cache directories"
 
 setup:
@@ -39,6 +44,16 @@ typecheck:
 # Regenerate the lockfile from current pyproject.toml without upgrading deps
 lock:
 	uv lock
+
+data: $(DATA_SRC)
+	uv run python -m ods_phenocontext.data build-manifest \
+		--input $(DATA_SRC) \
+		--out $(DATA_MANIFEST) \
+		--max-confirmed 15000
+	uv run python -m ods_phenocontext.data process \
+		--input $(DATA_SRC) \
+		--manifest $(DATA_MANIFEST) \
+		--out $(DATA_OUT)
 
 clean:
 	rm -rf .venv .ruff_cache .mypy_cache .pytest_cache
