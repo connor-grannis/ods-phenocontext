@@ -31,7 +31,7 @@ todos:
     status: done
   - id: m9_baseline_rules_biobert
     content: "M9: Baseline 3 rules-first + BioBERT fallback at 0.5 — runner with --stage rules_then_biobert_default; add per-source coverage to metrics.json; checkpoint: tests/test_baseline_rules_then_biobert.py asserts source distribution on synthetic mix"
-    status: pending
+    status: done
   - id: m10_baseline_tuned
     content: "M10: Baseline 4 rules-first + BioBERT + tuned thresholds — generate audits/thresholds_v1.json on val, rerun pipeline; document the 'tuned and evaluated on same val' caveat in docs/decision_log.md; checkpoint: tests/test_baseline_rules_then_biobert_tuned.py passes"
     status: pending
