@@ -6,7 +6,21 @@ authors = [
     { name = "Grannis, Connor", email = "connor.grannis@nationwidechildrens.org" }
 ]
 requires-python = ">=3.11,<3.12"
-dependencies = []
+dependencies = [
+    "torch>=2.4,<2.6",
+]
+
+# Cross-platform torch: PyPI (MPS-capable) on macOS; CUDA 12.4 wheel index on Linux.
+# The marker is evaluated at lock time per platform so both are in the lockfile.
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu124", marker = "sys_platform == 'linux'" },
+]
 
 [build-system]
 requires = ["uv_build>=0.8.4,<0.9.0"]
