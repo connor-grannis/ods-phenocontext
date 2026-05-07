@@ -17,6 +17,18 @@ negation/experiencer rules.
 
 ---
 
+## 2026-05-07 — torch lower bound raised to >=2.6
+
+**Decision:** `torch>=2.4,<2.6` changed to `torch>=2.6`.
+
+**Reason:** transformers 5.x blocks `torch.load` on torch < 2.6 for all
+`.bin`-format weights (CVE-2025-32434). `biobert-base-cased-v1.2` ships
+`.bin` weights; the environment test failed with `ValueError` until torch
+was upgraded to 2.6+. The CUDA wheel index (`pytorch-cu124`) still resolves
+correctly on Linux for 2.6+.
+
+---
+
 ## 2026-05-07 — prajjwal1/bert-tiny replaced with bert-base-uncased
 
 **Decision:** Checkpoint tokenizer changed from `prajjwal1/bert-tiny` to `bert-base-uncased`.
