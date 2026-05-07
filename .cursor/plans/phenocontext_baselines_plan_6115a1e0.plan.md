@@ -16,7 +16,7 @@ todos:
     status: done
   - id: m4_biobert_predictor
     content: "M4: add src/ods_phenocontext/models/biobert_predictor.py (BioBERTPredictor with predict_proba(instance) and predict(instance, thresholds)) wrapping BioBERTMultiLabel + tokenizer; export from models/__init__.py; checkpoint: tests/test_biobert_predictor.py + existing tests/test_pipeline_smoke.py pass end-to-end"
-    status: pending
+    status: done
   - id: m5_eval_threshold
     content: "M5: build src/ods_phenocontext/evaluate.py (per-label P/R/F1, micro/macro F1, PR-AUC, source coverage, slicing helpers) and src/ods_phenocontext/threshold_tuning.py (per-label sweep on val; assert split=='val'; write audits/thresholds_v<n>.json); checkpoint: tests/test_evaluate.py + tests/test_threshold_tuning.py pass"
     status: pending

@@ -1,3 +1,6 @@
-# Models package.
-# BioBERTMultiLabel is the production classifier; full implementation
-# comes in the modeling roadmap training phase.
+"""Models package."""
+
+from ods_phenocontext.models.biobert import BioBERTMultiLabel
+from ods_phenocontext.models.biobert_predictor import BioBERTPredictor
+
+__all__ = ["BioBERTMultiLabel", "BioBERTPredictor"]
