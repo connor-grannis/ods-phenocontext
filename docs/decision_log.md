@@ -37,5 +37,6 @@ No direct OpenAI or Anthropic SDK usage.
 hospital infrastructure. Bedrock model access must be granted per-region in
 the AWS console before use; record enabled model IDs and region here.
 
-**Enabled models (update when configured):** TBD — to be added when Bedrock
-access is provisioned.
+**Enabled models:** `us.anthropic.claude-sonnet-4-6` in `us-east-2`.
+Bedrock model access must be granted in the AWS console for this region before
+any live call. Update this entry if additional model IDs are enabled.
