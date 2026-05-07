@@ -28,7 +28,9 @@ src/ods_phenocontext/
   __init__.py               # package root, __version__
   schema.py                 # Instance, SyntheticAudit, TrainingManifest + LABEL_NAMES
   pipeline.py               # phenocontext_predict, RulesModel/BioBERTModel Protocols
-  rules/__init__.py          # placeholder; real rules loaded from rules/*.yaml
+  rules/__init__.py          # exports RuleClassifier
+  rules/engine.py            # RuleClassifier — conforms to RulesModel Protocol
+  rules/patterns.py          # compiled regex patterns (edit here, not YAML)
   models/
     __init__.py
     biobert.py              # BioBERTMultiLabel (encoder + linear head stub)
@@ -48,9 +50,9 @@ data/{gold,silver,synthetic,processed}/   # gitignored — never commit PHI
 audits/{teacher_outputs,synthetic_provenance,training_manifests}/
 configs/                    # per-iteration YAML configs
 prompts/                    # versioned teacher and generation prompts
-rules/                      # versioned YAML rule files
 docs/
   decision_log.md           # non-obvious choices, deferrals, and deferred items
+  rule_manifest.md          # human-readable documentation of every rule pattern
 ```
 
 ## Core Architecture
@@ -119,6 +121,13 @@ update the following:
 - `audits/teacher_outputs/` — raw teacher responses for audited instances
 - `audits/synthetic_provenance/` — `SyntheticAudit` records for every generated example
 - `docs/decision_log.md` — rationale for any new design choice or deferral
+
+## Keeping Documentation in Sync
+
+**Rule changes:** Any modification to `rules/patterns.py` or `rules/engine.py`
+must be accompanied by a corresponding update to `docs/rule_manifest.md`.
+The manifest is the human-readable contract for what the rule system does;
+it goes stale silently if patterns change without a matching doc update.
 
 ## Clinical Data Constraints
 
